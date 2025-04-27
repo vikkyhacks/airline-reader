@@ -24,6 +24,9 @@ class AirlineModel:
         self.travel_agent = None
         self.visa_details = None
 
+    def to_dict(self):
+        return self.__dict__
+
 
 class AirlineModelBuilder:
 

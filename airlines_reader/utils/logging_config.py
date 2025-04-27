@@ -9,7 +9,7 @@ def setup_logging():
     logger.setLevel(logging.INFO)
 
     formatter = logging.Formatter(
-        "%(asctime)s [%(levelname)-6s] %(message)s",  # Left-align the levelname to 6 chars
+        "%(asctime)s [%(levelname)s] %(message)s",  # Left-align the levelname to 6 chars
         datefmt="%Y-%m-%d %H:%M:%S"
     )
 
@@ -20,7 +20,7 @@ def setup_logging():
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     p = os.path.dirname
     log_dir = os.path.join(p(p(p(os.path.abspath(__file__)))), "logs", f"app_{timestamp}")
-    print(log_dir)
+    print("Logging to file: " + log_dir + "/app.log")
     os.makedirs(log_dir, exist_ok=True)  # create directory if not exists
 
     log_file = os.path.join(log_dir, "app.log")

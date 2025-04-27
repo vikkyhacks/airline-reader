@@ -1,4 +1,4 @@
-from src.utils.logs import setup_logging
+from airlines_reader.utils.logging_config import setup_logging
 import logging
 
 if __name__ == "__main__":

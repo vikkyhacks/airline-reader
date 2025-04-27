@@ -1,6 +1,10 @@
 
 import requests
-import json
+import logging
+
+from requests import HTTPError
+
+_LOG = logging.getLogger(__name__)
 
 _URL = "https://dxbooking.ethiopianairlines.com/api/graphql"
 
@@ -52,28 +56,14 @@ def _payload(pnr, last_name):
         """
     }
 
-def make_graphql_post_request(pnr, last_name):
-    try:
-        response = requests.post(_URL, json=_payload(pnr, last_name), headers=_HEADERS)
-        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
-        json_resp = response.json()
-        if json_resp.get('data', {}).get('getMYBTripDetails'):
-            return json_resp
-        error_details = json_resp.get('extensions', {}).get('errors')
-        print(f"Received error for pnr={pnr}; last_name={last_name}; error_details={error_details}")
-        return None
-    except requests.exceptions.RequestException as e:
-        print(f"Error making GraphQL request: {e}")
-        if response is not None:
-            print(f"Response code: {response.status_code}")
-            try:
-                print(response.json())  # Attempt to print the json of the response, even if it is an error.
-            except json.JSONDecodeError:
-                print(response.text)  # If the response is not json, print the text.
-        return None
-    except json.JSONDecodeError as e:
-        print(f"Error decoding json: {e}")
-        if response is not None:
-            print(f"Response code: {response.status_code}")
-            print(response.text)  # Print the text if the json can't be decoded.
-        return None
+def booking_details(pnr, last_name):
+    _LOG.info(f"Retrieving booking details for pnr={pnr} last_name={last_name}")
+    response = requests.post(_URL, json=_payload(pnr, last_name), headers=_HEADERS)
+    _LOG.debug(f"Received response: " + str(response))
+    response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+    json_resp = response.json()
+    if json_resp.get('data', {}).get('getMYBTripDetails'):
+        return json_resp
+    error_details = json_resp.get('extensions', {}).get('errors')
+    _LOG.error(f"Received error for pnr={pnr}; last_name={last_name}; error_details={error_details}")
+    raise HTTPError(error_details)

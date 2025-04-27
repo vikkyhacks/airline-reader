@@ -1,6 +1,6 @@
 import json
 
-from src.airlines.model import AirlineModelBuilder
+from airlines_reader.airlines.model import AirlineModelBuilder
 
 if __name__ == '__main__':
     builder = AirlineModelBuilder({'data': {'getMYBTripDetails': {'originalResponse': {
