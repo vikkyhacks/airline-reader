@@ -4,6 +4,8 @@ import logging
 
 from requests import HTTPError
 
+from airlines_reader.utils.cache import file_cache
+
 _LOG = logging.getLogger(__name__)
 
 _URL = "https://dxbooking.ethiopianairlines.com/api/graphql"
@@ -56,12 +58,15 @@ def _payload(pnr, last_name):
         """
     }
 
+
+# @file_cache()
 def booking_details(pnr, last_name):
     _LOG.info(f"Retrieving booking details for pnr={pnr} last_name={last_name}")
     response = requests.post(_URL, json=_payload(pnr, last_name), headers=_HEADERS)
-    _LOG.debug(f"Received response: " + str(response))
-    response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+    _LOG.info(f"Received response for pnr={pnr} last_name={last_name}: " + str(response))
+    response.raise_for_status()
     json_resp = response.json()
+    _LOG.info("Response data: " + str(json_resp))
     if json_resp.get('data', {}).get('getMYBTripDetails'):
         return json_resp
     error_details = json_resp.get('extensions', {}).get('errors')

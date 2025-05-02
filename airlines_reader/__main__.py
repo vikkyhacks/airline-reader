@@ -1,14 +1,18 @@
 import logging
 
+from requests import HTTPError
+
 from airlines_reader.airlines import booking_details, AirlineModelBuilder
 from airlines_reader.file_handler import read_file
 from airlines_reader.file_handler.file_handler import write_file
 from airlines_reader.utils import setup_logging
 
+setup_logging()
+
 _LOG = logging.getLogger(__name__)
 
 
-def _enriched_record(record):
+def _enrich_record(record):
     pnr = record["PNR"]
     name = record['NAME']
     _LOG.info(f"Enriching record pnr={pnr} name={name}")
@@ -18,20 +22,21 @@ def _enriched_record(record):
         new_dict = dict(record)
         new_dict.update(parsed_booking_info)
         return new_dict
-    except Exception as e:
-        _LOG.exception("Operation failed for pnr={pnr} name={name}", e)
+    except HTTPError:
+        _LOG.error(f"Received HTTPError; skipping record pnr={pnr} name={name}")
+        return record
+    except Exception:
+        _LOG.exception(f"Unknown error; skipping record pnr={pnr} name={name}")
         return record
 
 
 def main(input_fp, output_fp):
-    setup_logging()
     records = read_file(input_fp)
     enriched_records = [
-        _enriched_record(record)
+        _enrich_record(record)
         for record in records
     ]
     write_file(enriched_records, output_fp)
-
 
 
 if __name__ == "__main__":

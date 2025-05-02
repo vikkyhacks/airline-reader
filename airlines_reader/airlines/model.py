@@ -14,6 +14,18 @@ def _remove_empty(d):
     return d
 
 
+def _flatten(object):
+    def _to_str(collections):
+        if isinstance(collections, dict):
+            return "\n".join([key + ": " + value for key, value in collections.items() if value])
+        elif isinstance(collections, list):
+            return "\n\n".join([_flatten(item) for item in collections if item])
+        else:
+            return collections
+
+    return (_to_str(object) or '').strip()
+
+
 class AirlineModel:
     def __init__(self):
         self.booking_data = None
@@ -23,9 +35,16 @@ class AirlineModel:
         self.phone_number = None
         self.travel_agent = None
         self.visa_details = None
-
     def to_dict(self):
-        return self.__dict__
+        return {
+            'Booking Data': _flatten(self.booking_data),
+            'Currency': _flatten(self.currency),
+            'Issue Place': _flatten(self.issue_place),
+            'Passport': _flatten(self.passport),
+            'Phone Number': _flatten(self.phone_number),
+            'Travel Agent': _flatten(self.travel_agent),
+            'Visa Details': _flatten(self.visa_details)
+        }
 
 
 class AirlineModelBuilder:
@@ -53,9 +72,22 @@ class AirlineModelBuilder:
                 } for document in documents]
 
     def _currency(self):
-        self.__model.currency = _remove_empty(self.__get(
+        currencies = set()
+        def _currency_vals(node: dict):
+            if isinstance(node, dict) and "currency" in node:
+                currencies.add(node["currency"])
+            if isinstance(node, dict):
+                for k, v in node.items():
+                    _currency_vals(v)
+            if isinstance(node, list):
+                for v in node:
+                    _currency_vals(v)
+
+        potential_currency_nodes = _remove_empty(self.__get(
             'data.getMYBTripDetails.originalResponse.pnr.priceBreakdown'
         ))
+        _currency_vals(potential_currency_nodes)
+        self.__model.currency = list(currencies)
 
     def __for_every_passenger(self, func):
         return [
