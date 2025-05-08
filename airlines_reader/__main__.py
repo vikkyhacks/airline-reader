@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from requests import HTTPError
 
@@ -40,4 +41,6 @@ def main(input_fp, output_fp):
 
 
 if __name__ == "__main__":
-    main("/Users/vigneshkp/Downloads/ADD TO BOM 610 & 640.xlsx", "/Users/vigneshkp/Downloads/out.xlsx")
+    if len(sys.argv) < 3:
+        print("Missing input and output file path")
+    main(sys.argv[1], sys.argv[2])
