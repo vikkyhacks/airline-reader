@@ -43,4 +43,6 @@ def main(input_fp, output_fp):
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Missing input and output file path")
+        exit(1)
     main(sys.argv[1], sys.argv[2])
+    exit(0)
