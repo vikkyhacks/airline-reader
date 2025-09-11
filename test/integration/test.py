@@ -1,7 +1,4 @@
-from airlines_reader.utils.logging_config import setup_logging
-import logging
+from airlines_reader.__main__ import main
 
 if __name__ == "__main__":
-    setup_logging()
-    logging.info("Voila info")
-    logging.error("Voila error")
+    main("../../sampleFiles/ADDBOM.xlsx", "./out.xlsx")
