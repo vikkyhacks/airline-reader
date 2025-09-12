@@ -1,6 +1,7 @@
 
 import requests
 import logging
+import config
 
 from requests import HTTPError
 
@@ -27,7 +28,6 @@ _HEADERS = {
     'X-Sabre-Storefront': 'ETDX',
     'Ssotoken': 'undefined',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.86 Safari/537.36',
-    'Conversation-Id': 'undefined',
     'Origin': 'https://dxbooking.ethiopianairlines.com',
     'Sec-Fetch-Site': 'same-origin',
     'Sec-Fetch-Mode': 'cors',
@@ -62,7 +62,8 @@ def _payload(pnr, last_name):
 # @file_cache()
 def booking_details(pnr, last_name):
     _LOG.info(f"Retrieving booking details for pnr={pnr} last_name={last_name}")
-    response = requests.post(_URL, json=_payload(pnr, last_name), headers=_HEADERS)
+    headers = config.HEADERS | _HEADERS
+    response = requests.post(_URL, json=_payload(pnr, last_name), headers=headers)
     _LOG.info(f"Received response for pnr={pnr} last_name={last_name}: " + str(response))
     response.raise_for_status()
     json_resp = response.json()
