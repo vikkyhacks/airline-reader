@@ -28,22 +28,34 @@ def _flatten(object):
 
 class AirlineModel:
     def __init__(self):
+        self.name=None
+        self.trip=None
+        self.layover=None
+        self.personal_details=None
         self.booking_data = None
+        self.payment_details = None
         self.currency = None
         self.issue_place = None
         self.passport = None
         self.phone_number = None
         self.travel_agent = None
         self.visa_details = None
+        self.email = None
     def to_dict(self):
         return {
-            'Booking Data': _flatten(self.booking_data),
-            'Currency': _flatten(self.currency),
-            'Issue Place': _flatten(self.issue_place),
-            'Passport': _flatten(self.passport),
+            'Name': _flatten(self.name),	    
+            'Trip': _flatten(self.trip),
+            'Layover': _flatten(self.layover),
+	    'Personal details': _flatten(self.personal_details),
             'Phone Number': _flatten(self.phone_number),
+            'email': _flatten(self.email),
+            'Payment info': _flatten(self.payment_details),
+            'Currency': _flatten(self.currency),
+            'Passport': _flatten(self.passport),
+            'Booking Data': _flatten(self.booking_data),
+            'Issue Place': _flatten(self.issue_place),
             'Travel Agent': _flatten(self.travel_agent),
-            'Visa Details': _flatten(self.visa_details)
+            'Visa Details': _flatten(self.visa_details) 
         }
 
 
@@ -70,6 +82,36 @@ class AirlineModelBuilder:
                     'Issue Date': self.__get('documentDetails.issueDate', document),
                     'Currency Code': self.__get('documentDetails.currencyCode', document)
                 } for document in documents]
+
+    def _personal_details(self):
+        passenger_info = self.__get('data.getMYBTripDetails.originalResponse.pnr.passengers')
+        if passenger_info:
+            self.__model.personal_details = [
+                {
+                    'DOB': self.__get('passengerInfo.dateOfBirth', pax),
+                    'Gender': self.__get('passengerInfo.gender', pax),
+                    'Email': ", ".join(self.__get('passengerInfo.emails', pax)) if self.__get('passengerInfo.emails', pax) else "",
+                    'Phone': ", ".join(
+                        [f"{phone.get('countryCode', '')} {phone.get('number', '')}".strip()
+                         for phone in self.__get('passengerInfo.phones', pax)]
+                     ) if self.__get('passengerInfo.phones', pax) else ""
+                } for pax in passenger_info
+            ]
+
+
+    def _name(self):
+        passenger_name = self.__get('data.getMYBTripDetails.originalResponse.pnr.passengers')
+        if passenger_name:
+            self.__model.name = [
+                " ".join(
+                    filter(None, [
+                        self.__get('passengerDetails.firstName', pax),
+                        self.__get('passengerDetails.middleName', pax),
+                        self.__get('passengerDetails.lastName', pax)
+                    ])
+                )
+                for pax in passenger_name
+            ]
 
     def _currency(self):
         currencies = set()
@@ -114,15 +156,93 @@ class AirlineModelBuilder:
             'Date Of Birth': self.__get('documentInfo.dateOfBirth', passenger)
         })
 
+
     def _phone_number(self):
-        self.__model.phone_number = [
+        special_service_phones = [
             request.get('description')
             for request in self.__get('data.getMYBTripDetails.originalResponse.pnr.specialServiceRequests') or []
             if request.get('code') == 'CTCM'
         ]
 
+        contact_phones = [
+            f"+{phone.get('countryCode', '')} {phone.get('number', '')}".strip()
+            for phone in self.__get('data.getMYBTripDetails.originalResponse.pnr.contact.phones') or []
+        ]
+
+        self.__model.phone_number = special_service_phones + contact_phones
+
+    def _email(self):
+        special_service_emails = [
+            request.get('origin')
+            for request in self.__get('data.getMYBTripDetails.originalResponse.pnr.specialServiceRequests') or []
+            if request.get('code') == 'CTCE'
+        ]
+
+        contact_emails = self.__get('data.getMYBTripDetails.originalResponse.pnr.contact.emails') or []
+
+        self.__model.email = special_service_emails + contact_emails
+
+    def _layover(self):
+        itinerary_parts = self.__get('data.getMYBTripDetails.originalResponse.pnr.itinerary.itineraryParts')
+        self.__model.layover = []
+        for part in itinerary_parts:
+            connections = part.get('connectionInformations', [])
+            for conn in connections:
+                duration = conn.get('duration')
+                if duration is not None:
+                    hours = duration // 60
+                    minutes = duration % 60
+                    formatted = f"{hours}h {minutes}m"
+                    self.__model.layover.append(formatted)
+
     def _travel_agent(self):
         self.__model.travel_agent = self.__get('data.getMYBTripDetails.originalResponse.pnr.otherServiceInformation')
+
+    def _trip(self):
+        passengers = self.__get('data.getMYBTripDetails.originalResponse.pnr.passengers')
+        self.__model.trip = []
+        seen_segments = set()
+
+        for pax in passengers:
+            prefs = pax.get('preferences', {}).get('specialPreferences', {})
+            remarks = prefs.get('specialServiceRequestRemarks', [])
+
+            for remark in remarks:
+                for segment in remark.get("segmentKeys", []):
+                    signature = (
+                        segment.get("origin", ""),
+                        segment.get("destination", ""),
+                        segment.get("departure", "")
+                    )
+
+                    if signature not in seen_segments:
+                        seen_segments.add(signature)
+                        route = f"{signature[0]} → {signature[1]}"
+                        time = f"{segment.get('departure', '')} → {segment.get('arrival', '')}"
+
+                        if route and time:
+                            self.__model.trip.append([route, time])
+
+
+    def _payment_details(self):
+        payment_details = self.__get('data.getMYBTripDetails.originalResponse.pnr.payments')
+        if payment_details:
+            self.__model.payment_details = []
+            for price in payment_details:
+                method = price.get('paymentType', '')
+                code = price.get('paymentCode', '')
+                card_number = price.get('identifier','')
+                price_block = price.get('price', {}).get('alternatives', [[{}]])
+                amount = price_block[0][0].get('amount', '')
+                currency = price_block[0][0].get('currency', '')
+
+                self.__model.payment_details.append({
+                    'Payment Method': method,
+                    'Payment Code': code,
+                    'card_number': card_number,
+                    'Amount': f"{amount} {currency}" if amount and currency else ""
+                })
+
 
     def _visa_details(self):
         self.__model.visa_details = self.__for_every_passenger(lambda passenger: [
@@ -136,6 +256,10 @@ class AirlineModelBuilder:
             for all_document_infos in self.__get('allDocumentInfos', passenger) or []])
 
     def build(self):
+        
+        self._trip()
+        self._name()
+        self._personal_details()
         self._booking_data()
         self._currency()
         self._issue_place()
@@ -143,4 +267,7 @@ class AirlineModelBuilder:
         self._phone_number()
         self._travel_agent()
         self._visa_details()
+        self._email()
+        self._layover()
+        self._payment_details()
         return self.__model
