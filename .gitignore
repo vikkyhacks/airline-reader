@@ -1,3 +1,6 @@
 /logs/
 .DS_Store
 /sampleFiles/
+
+__pycache__/
+*.pyc
