@@ -92,18 +92,12 @@ def booking_details(pnr, last_name):
     headers = config.HEADERS | _HEADERS
 
     session = requests.Session()
-    session.trust_env = False
-    session.proxies = {
-        "http": "http://localhost:8080",
-        "https": "https://localhost:8080",  # Burp listens as HTTP proxy for both
-    }
-    session.verify = False
     request = requests.Request("POST", _URL, json=_payload(pnr, last_name), headers=headers)
     prepared = session.prepare_request(request)
 
     _log_request(prepared)
 
-    response = session.send(prepared, timeout=30)
+    response = session.send(prepared)
     
     _log_response(response)
 
