@@ -5,4 +5,4 @@ HEADERS = {
     "Conversation-id": """cmg3jxfz7vasg0psaecvnd8kx"""
 }
 
-HTTP_LOG_LEVEL = logging.DEBUG
+HTTP_LOG_LEVEL = logging.INFO
