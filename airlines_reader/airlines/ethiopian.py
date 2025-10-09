@@ -67,7 +67,7 @@ def booking_details(pnr, last_name):
     _LOG.info(f"Received response for pnr={pnr} last_name={last_name}: " + str(response))
     response.raise_for_status()
     json_resp = response.json()
-    _LOG.info("Response data: " + str(json_resp))
+    _LOG.info("Response data: " + str(json_resp)[:100])
     if json_resp.get('data', {}).get('getMYBTripDetails'):
         return json_resp
     error_details = json_resp.get('extensions', {}).get('errors')
